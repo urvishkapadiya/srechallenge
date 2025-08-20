@@ -1,0 +1,27 @@
+name: Build image
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  REGISTRY: ghcr.io # Only used for labeling, if you want to push it make sure you have permissions to push.
+  IMAGE_NAME: ${{ github.repository   }}
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Maybe there's an action that does this for us.

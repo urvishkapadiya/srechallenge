@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DumbKV - Key-Value Store</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .get-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .get-btn:hover {
+            background-color: #1976D2;
+        }
+        
+        .set-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .set-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .small-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Key-Value Store</h1>
+        
+        <form id="kvForm">
+            <div class="form-group">
+                <label for="database">Database:</label>
+                <input type="number" id="database" name="database" value="0" min="0" max="9999999" required>
+                <div class="small-text">Database number (0-9,999,999)</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="key">Key:</label>
+                <input type="text" id="key" name="key" pattern="[a-zA-Z0-9_-]+" required>
+                <div class="small-text">Only text characters, numbers, underscores, and hyphens allowed</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="value">Value:</label>
+                <textarea id="value" name="value" placeholder="Enter the value here..."></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button type="button" class="get-btn" onclick="getValue()">Get Value</button>
+                <button type="button" class="set-btn" onclick="setValue()">Set Value</button>
+                <button type="button" class="delete-btn" onclick="deleteValue()">Delete Key</button>
+            </div>
+        </form>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function validateInputs() {
+            const database = document.getElementById('database').value;
+            const key = document.getElementById('key').value;
+            
+            // Validate database
+            const dbNum = parseInt(database);
+            if (isNaN(dbNum) || dbNum < 0 || dbNum > 9999999) {
+                showResult('Database must be a number between 0 and 9,999,999', 'error');
+                return false;
+            }
+            
+            // Validate key - only allow text characters (letters, numbers, underscore, hyphen)
+            if (!key || !/^[a-zA-Z0-9_-]+$/.test(key)) {
+                showResult('Key must contain only letters, numbers, underscores, and hyphens', 'error');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            
+            // Hide result after 5 seconds
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function getValue() {
+            if (!validateInputs()) return;
+            
+            const database = document.getElementById('database').value;
+            const key = document.getElementById('key').value;
+            
+            try {
+                const response = await fetch('/kv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        database: parseInt(database),
+                        key: key
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.value !== null) {
+                        document.getElementById('value').value = data.value;
+                        showResult(`Value retrieved for key "${key}"`, 'success');
+                    } else {
+                        document.getElementById('value').value = '';
+                        showResult(`No value found for key "${key}"`, 'error');
+                    }
+                } else {
+                    const error = await response.text();
+                    showResult(`Error: ${error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function setValue() {
+            if (!validateInputs()) return;
+            
+            const database = document.getElementById('database').value;
+            const key = document.getElementById('key').value;
+            const value = document.getElementById('value').value;
+            
+            try {
+                const response = await fetch('/kv', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        database: parseInt(database),
+                        key: key,
+                        value: value
+                    })
+                });
+                
+                if (response.ok) {
+                    showResult(`Value set for key "${key}"`, 'success');
+                } else {
+                    const error = await response.text();
+                    showResult(`Error: ${error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function deleteValue() {
+            if (!validateInputs()) return;
+            
+            const database = document.getElementById('database').value;
+            const key = document.getElementById('key').value;
+            
+            // Confirm deletion
+            if (!confirm(`Are you sure you want to delete the key "${key}" from database ${database}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/kv', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        database: parseInt(database),
+                        key: key
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('value').value = '';
+                    showResult(`Key "${key}" deleted successfully`, 'success');
+                } else {
+                    const error = await response.text();
+                    showResult(`Error: ${error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Add event listeners for Enter key
+        document.getElementById('key').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                getValue();
+            }
+        });
+        
+        // Prevent invalid characters in key field
+        document.getElementById('key').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, '');
+        });
+        
+        // Validate database field
+        document.getElementById('database').addEventListener('input', function(e) {
+            const value = parseInt(this.value);
+            if (value > 9999999) {
+                this.value = 9999999;
+            } else if (value < 0) {
+                this.value = 0;
+            }
+        });
+    </script>
+</body>
+</html>
