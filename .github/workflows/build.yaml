@@ -85,7 +85,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ steps.meta.outputs.IMAGE_FULLNAME }}
           push: true
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
