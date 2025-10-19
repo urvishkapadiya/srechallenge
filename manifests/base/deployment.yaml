@@ -21,11 +21,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
-          env:
-            - name: DATABASE_TYPE
-              value: sqlite
-            - name: DATABASE_LOCATION
-              value: /data/dumbkvstore/db.sqlite3
+          envFrom:
+            - configMapRef:
+                name: dumbkv-config
           volumeMounts:
             - name: dumbkv-pvc
               mountPath: /data/dumbkvstore
